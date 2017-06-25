@@ -90,6 +90,7 @@ public class StashNotifierTest
                 stashBaseUrl,
                 "scot",
                 true,
+                "Build Job",
                 null,
                 true,
                 "test-project",
@@ -141,7 +142,7 @@ public class StashNotifierTest
 		when(revision.getSha1String()).thenReturn(sha1);
 		when(build.getProject()).thenReturn(project);
 		when(run.getParent()).thenReturn(project);
-                when(build.getFullDisplayName()).thenReturn("foo");
+        when(build.getFullDisplayName()).thenReturn("foo");
 		when(build.getUrl()).thenReturn("foo");
 		when(build.getActions(BuildData.class)).thenReturn(actions);
 		when(environment.expand(anyString())).thenReturn(sha1);
@@ -236,6 +237,7 @@ public class StashNotifierTest
                 "https://localhost",
                 "scot",
                 true,
+                "Build Job",
                 null,
                 true,
                 null,
@@ -490,6 +492,7 @@ public class StashNotifierTest
                 "https://localhost",
                 "scot",
                 true,
+                "Build Job",
                 sha1,
                 true,
                 null,
@@ -514,6 +517,7 @@ public class StashNotifierTest
                 "http://localhost",
                 "scot",
                 true,
+                "Build Job",
                 sha1,
                 true,
                 null,
@@ -604,6 +608,7 @@ public class StashNotifierTest
                 "",
                 "scot",
                 true,
+                "Build Job",
                 null,
                 true,
                 key,
@@ -631,6 +636,7 @@ public class StashNotifierTest
                 "",
                 "scot",
                 true,
+                "Build Job",
                 null,
                 true,
                 key,

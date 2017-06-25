@@ -12,6 +12,8 @@
    <f:entry title="${%Credentials}" field="credentialsId">
       <c:select/>
     </f:entry>
+   <f:entry title="Job Key" field="jobKey">
+    <f:textbox />
    <f:entry title="Commit SHA-1" field="commitSha1">
     <f:textbox />
   </f:entry>

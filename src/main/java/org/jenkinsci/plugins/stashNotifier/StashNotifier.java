@@ -114,6 +114,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	/** if true, ignore exception thrown in case of an unverified SSL peer. */
 	private final boolean ignoreUnverifiedSSLPeer;
 
+	/** specify the job key from config */
+	private final String jobKey;
+
 	/** specify the commit from config */
 	private final String commitSha1;
 
@@ -146,6 +149,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			String stashServerBaseUrl,
 			String credentialsId,
 			boolean ignoreUnverifiedSSLPeer,
+			String jobKey,
 			String commitSha1,
 			boolean includeBuildNumberInKey,
 			String projectKey,
@@ -161,6 +165,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		this.credentialsId = credentialsId;
 		this.ignoreUnverifiedSSLPeer
 				= ignoreUnverifiedSSLPeer;
+		this.jobKey = jobKey;
 		this.commitSha1 = commitSha1;
 		this.includeBuildNumberInKey = includeBuildNumberInKey;
 		this.projectKey = projectKey;
@@ -185,6 +190,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 		return ignoreUnverifiedSSLPeer;
 	}
 
+        public String getjobKey() {
+		return jobKey;
+	}
 	public String getCommitSha1() {
 		return commitSha1;
 	}
@@ -294,11 +302,17 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			return true;
 		}
 
+                String jobKey = getjobKey();
+		if (jobKey == null){
+			logger.println(
+				"Job key is not available, default key will be used.");
+		}
+
 		Collection<String> commitSha1s = lookupCommitSha1s(run, listener);
 		for  (String commitSha1 : commitSha1s) {
 			try {
 				NotificationResult result
-					= notifyStash(logger, run, commitSha1, listener, state);
+					= notifyStash(logger, run, jobKey, commitSha1, listener, state);
 				if (result.indicatesSuccess) {
 					logger.println(
 						"Notified Stash for commit with id "
@@ -533,6 +547,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
         private boolean ignoreUnverifiedSsl;
         private boolean includeBuildNumberInKey;
 		private String projectKey;
+		private String jobKey;
 		private boolean prependParentProjectKey;
 		private boolean disableInprogressNotification;
 
@@ -671,6 +686,9 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
             if (formData.has("projectKey")) {
                 projectKey = formData.getString("projectKey");
             }
+            if (formData.has("jobKey")) {
+                jobKey = formData.getString("jobKey");
+            }
             prependParentProjectKey = formData.getBoolean("prependParentProjectKey");
 
 			disableInprogressNotification = formData.getBoolean("disableInprogressNotification");
@@ -688,6 +706,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	 *
 	 * @param logger		the logger to use
 	 * @param run			the run to notify Stash of
+	 * @param jobKey	    the job key to identify each job type of the run commit
 	 * @param commitSha1	the SHA1 of the run commit
 	 * @param listener		the run listener for logging
 	 * @param state			the state of the build as defined by the Stash API.
@@ -695,6 +714,7 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	protected NotificationResult notifyStash(
 			final PrintStream logger,
 			final Run<?, ?> run,
+			final String jobKey,
 			final String commitSha1,
 			final TaskListener listener,
 			final StashBuildState state) throws Exception {
@@ -921,10 +941,10 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 	 * @param run the run to notify Stash of
 	 * @return the run key for the Stash notification
 	 */
-	protected String getBuildKey(final Run<?, ?> run,
-								 TaskListener listener) {
+	protected String getBuildKey(final Run<?, ?> run, TaskListener listener) {
 
 		StringBuilder key = new StringBuilder();
+                String jobKey = getjobKey(); //deepak
 
 		if (prependParentProjectKey || getDescriptor().isPrependParentProjectKey()) {
 			if (null != run.getParent().getParent()) {
@@ -932,30 +952,34 @@ public class StashNotifier extends Notifier implements SimpleBuildStep {
 			}
 		}
 
-		String overriddenKey = (projectKey != null && projectKey.trim().length() > 0) ? projectKey : getDescriptor().getProjectKey();
-		if (overriddenKey != null && overriddenKey.trim().length() > 0) {
-			PrintStream logger = listener.getLogger();
-				try {
-					if (!(run instanceof AbstractBuild<?, ?>)) {
-						key.append(TokenMacro.expandAll(run, new FilePath(run.getRootDir()), listener, projectKey));
-					} else {
-						key.append(TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, projectKey));
-					}
-				} catch (IOException ioe) {
-					logger.println("Cannot expand build key from parameter. Processing with default build key");
-					ioe.printStackTrace(logger);
-					key.append(getDefaultBuildKey(run));
-				} catch (InterruptedException ie) {
-					logger.println("Cannot expand build key from parameter. Processing with default build key");
-					ie.printStackTrace(logger);
-					key.append(getDefaultBuildKey(run));
-				} catch (MacroEvaluationException mee) {
-					logger.println("Cannot expand build key from parameter. Processing with default build key");
-					mee.printStackTrace(logger);
-					key.append(getDefaultBuildKey(run));
-			}
-		} else {
-			key.append(getDefaultBuildKey(run));
+		if (jobKey != null){
+                   key.append(jobKey);
+                } else {
+		      String overriddenKey = (projectKey != null && projectKey.trim().length() > 0) ? projectKey : getDescriptor().getProjectKey();
+		      if (overriddenKey != null && overriddenKey.trim().length() > 0) {
+			      PrintStream logger = listener.getLogger();
+				      try {
+					      if (!(run instanceof AbstractBuild<?, ?>)) {
+						      key.append(TokenMacro.expandAll(run, new FilePath(run.getRootDir()), listener, projectKey));
+					      } else {
+						      key.append(TokenMacro.expandAll((AbstractBuild<?, ?>) run, listener, projectKey));
+					      }
+				      } catch (IOException ioe) {
+					      logger.println("Cannot expand build key from parameter. Processing with default build key");
+					      ioe.printStackTrace(logger);
+					      key.append(getDefaultBuildKey(run));
+				      } catch (InterruptedException ie) {
+					      logger.println("Cannot expand build key from parameter. Processing with default build key");
+					      ie.printStackTrace(logger);
+					      key.append(getDefaultBuildKey(run));
+				      } catch (MacroEvaluationException mee) {
+					      logger.println("Cannot expand build key from parameter. Processing with default build key");
+					      mee.printStackTrace(logger);
+					      key.append(getDefaultBuildKey(run));
+			      }
+		      } else {
+			      key.append(getDefaultBuildKey(run));
+		      }
 		}
 
 		return StringEscapeUtils.escapeJavaScript(key.toString());
